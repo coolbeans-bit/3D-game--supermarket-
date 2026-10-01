@@ -1,0 +1,117 @@
+import 'package:flutter_scene/scene.dart';
+import 'package:vector_math/vector_math.dart';
+
+import '../../checkout/checkout_session.dart';
+import '../../checkout/sale_transaction.dart';
+import '../../interaction/interactable.dart';
+import '../../interaction/interaction_system.dart';
+import '../../world/supermarket/supermarket_layout.dart';
+import 'blockout_geometry.dart';
+
+/// Checkout counter, scanner stand, payment pad, and queue marks.
+///
+/// The scanner stand is the interaction target. The stand is tall enough
+/// to meet an eye-level ray. Payment buttons live in the checkout panel.
+void addSupermarketCheckout(
+  Scene scene,
+  InteractionSystem interactions,
+  BlockoutPalette palette,
+  CheckoutSession checkout,
+) {
+  for (final span in SupermarketLayout.solids) {
+    if (span.role == SpanRole.counter) {
+      addSpan(scene, span, name: 'checkout-counter', material: palette.counter);
+    }
+  }
+
+  final scanner = addBox(
+    scene,
+    name: 'checkout-scanner',
+    center: Vector3(
+      SupermarketLayout.scannerCenterX,
+      SupermarketLayout.counterHeight + SupermarketLayout.scannerHeight / 2,
+      SupermarketLayout.scannerCenterZ,
+    ),
+    size: Vector3(
+      SupermarketLayout.scannerWidth,
+      SupermarketLayout.scannerHeight,
+      SupermarketLayout.scannerWidth,
+    ),
+    material: palette.scanner,
+    shadowStatic: false,
+  );
+  addBox(
+    scene,
+    name: 'checkout-payment',
+    center: Vector3(
+      SupermarketLayout.paymentCenterX,
+      SupermarketLayout.counterHeight + 0.02,
+      SupermarketLayout.paymentCenterZ,
+    ),
+    size: Vector3(0.36, 0.04, 0.28),
+    material: palette.payment,
+    castsShadows: false,
+  );
+  for (var i = 0; i < SupermarketLayout.queueMarks.length; i++) {
+    final mark = SupermarketLayout.queueMarks[i];
+    addBox(
+      scene,
+      name: 'queue-$i',
+      center: Vector3(mark.x, 0.015, mark.z),
+      size: Vector3(0.55, 0.02, 0.55),
+      material: palette.queue,
+      castsShadows: false,
+    );
+  }
+
+  interactions.bind(
+    scanner,
+    _CheckoutInteractable(
+      checkout: checkout,
+      onUse: () {
+        if (checkout.carry.isHolding) {
+          checkout.scanHeldItem();
+          return;
+        }
+        checkout.open();
+      },
+    ),
+  );
+}
+
+class _CheckoutInteractable implements Interactable {
+  _CheckoutInteractable({required this.checkout, required this.onUse});
+
+  final CheckoutSession checkout;
+  final void Function() onUse;
+
+  @override
+  String get id => 'checkout';
+
+  @override
+  String get displayName => 'Checkout';
+
+  @override
+  String get prompt {
+    final state = checkout.transaction?.state;
+    final canScan =
+        state == null ||
+        state == TransactionState.idle ||
+        state == TransactionState.scanning ||
+        state == TransactionState.completed ||
+        state == TransactionState.cancelled;
+    if (checkout.carry.isHolding && canScan) {
+      return 'Scan Product';
+    }
+    return 'Use Checkout';
+  }
+
+  @override
+  int? get priceAmount => null;
+
+  @override
+  bool get isInteractable => true;
+
+  @override
+  void interact() => onUse();
+}
