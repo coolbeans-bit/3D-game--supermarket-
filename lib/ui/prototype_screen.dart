@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/catalog/product_catalog.dart';
+import '../game/checkpoints/std1_run.dart';
 import '../game/carry/carry_controller.dart';
 import '../game/carry/product_carry.dart';
 import '../game/checkout/checkout_session.dart';
@@ -10,16 +11,24 @@ import '../game/input/virtual_joystick.dart';
 import '../game/interaction/interaction_system.dart';
 import '../game/player/player_controller.dart';
 import '../game/scene/prototype_scene_view.dart';
+import '../game/literacy/lesson_player.dart';
+import '../game/literacy/literacy_session.dart';
 import '../game/world/collision_box.dart';
 import '../game/world/supermarket/supermarket_layout.dart';
 import 'center_reticle.dart';
+import 'std1_checkpoint_panel.dart';
 import 'checkout_panel.dart';
 import 'customer_debug_hud.dart';
 import 'interaction_prompt.dart';
+import 'lesson_screen.dart';
 
-/// First-person test screen: the room, touch controls, and a small HUD.
+/// Third-person market. Std 1 plays the checkpoint run. Later classes
+/// keep their lesson card.
 class PrototypeScreen extends StatefulWidget {
-  const PrototypeScreen({super.key});
+  const PrototypeScreen({super.key, this.lesson, this.std1 = false});
+
+  final LessonPlayer? lesson;
+  final bool std1;
 
   @override
   State<PrototypeScreen> createState() => _PrototypeScreenState();
@@ -44,6 +53,16 @@ class _PrototypeScreenState extends State<PrototypeScreen> {
   final CustomerManager _customers = CustomerManager(
     catalog: ProductCatalog.starter,
   );
+  final LiteracySession _learning = LiteracySession();
+  Std1Run? _checkpoint;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.std1) {
+      _checkpoint = Std1Run();
+    }
+  }
 
   @override
   void dispose() {
@@ -52,6 +71,8 @@ class _PrototypeScreenState extends State<PrototypeScreen> {
     _carry.dispose();
     _checkout.dispose();
     _customers.dispose();
+    _learning.dispose();
+    _checkpoint?.dispose();
     super.dispose();
   }
 
@@ -69,6 +90,8 @@ class _PrototypeScreenState extends State<PrototypeScreen> {
             productCarry: _productCarry,
             checkout: _checkout,
             customers: _customers,
+            learning: _learning,
+            checkpoint: _checkpoint,
           ),
           Align(
             alignment: Alignment.centerRight,
@@ -83,7 +106,7 @@ class _PrototypeScreenState extends State<PrototypeScreen> {
             bottom: 24,
             child: SafeArea(child: VirtualJoystick(onChanged: _player.setMove)),
           ),
-          const CenterReticle(),
+          if (_checkpoint == null) const CenterReticle(),
           Align(
             alignment: Alignment.bottomCenter,
             child: SafeArea(
@@ -91,21 +114,39 @@ class _PrototypeScreenState extends State<PrototypeScreen> {
                 padding: const EdgeInsets.only(bottom: 168),
                 child: InteractionPrompt(
                   system: _interactions,
-                  refresh: Listenable.merge([_carry, _checkout]),
+                  refresh: Listenable.merge([_carry, _checkout, _learning]),
                 ),
               ),
             ),
           ),
-          _PrototypeHud(player: _player, carry: _carry),
-          Align(
-            alignment: Alignment.topLeft,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 8, left: 8),
-                child: CustomerDebugHud(customers: _customers),
+          if (_checkpoint == null) ...[
+            _PrototypeHud(player: _player, carry: _carry),
+            Align(
+              alignment: Alignment.topLeft,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8, left: 8),
+                  child: CustomerDebugHud(customers: _customers),
+                ),
               ),
             ),
-          ),
+          ],
+          if (_checkpoint != null)
+            Align(
+              alignment: Alignment.topCenter,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: 420,
+                      maxHeight: 300,
+                    ),
+                    child: Std1CheckpointPanel(run: _checkpoint!),
+                  ),
+                ),
+              ),
+            ),
           Align(
             alignment: Alignment.topCenter,
             child: Padding(
@@ -113,6 +154,25 @@ class _PrototypeScreenState extends State<PrototypeScreen> {
               child: CheckoutPanel(session: _checkout),
             ),
           ),
+          if (widget.lesson != null)
+            Align(
+              alignment: Alignment.topLeft,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8, top: 96),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: 210,
+                      maxHeight: 320,
+                    ),
+                    child: LessonDock(
+                      player: widget.lesson!,
+                      onLeave: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

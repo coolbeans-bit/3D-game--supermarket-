@@ -40,3 +40,18 @@ PlayerViewpoint playerViewpoint({
   );
   return PlayerViewpoint(eye, eye + forward);
 }
+
+/// Camera behind the player, looking at their head.
+PlayerViewpoint thirdPersonViewpoint({
+  required Vector3 feet,
+  required double yaw,
+  required double pitch,
+}) {
+  final forward = Vector3(sin(yaw), 0, -cos(yaw));
+  final eye = Vector3(
+    feet.x - forward.x * 2.6,
+    feet.y + 2.15 - pitch * 0.6,
+    feet.z - forward.z * 2.6,
+  );
+  return PlayerViewpoint(eye, Vector3(feet.x, feet.y + 1.05, feet.z));
+}

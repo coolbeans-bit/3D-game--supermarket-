@@ -13,11 +13,11 @@ class CustomerDebugHud extends StatelessWidget {
     return ListenableBuilder(
       listenable: customers,
       builder: (context, _) {
-        final lines = <String>['Active Customers: ${customers.activeCount}'];
-        for (final customer in customers.active) {
-          final x = customer.position.x.toStringAsFixed(2);
-          final z = customer.position.z.toStringAsFixed(2);
-          lines.add('${customer.stateLabel}  X $x  Z $z');
+        final lines = <String>[
+          'Active Customers: ${customers.activeCount}/${customers.config.maxActive}',
+        ];
+        if (customers.active.isNotEmpty) {
+          lines.add('Customer State: ${customers.active.first.stateLabel}');
         }
         return Material(
           color: const Color(0xCC111111),

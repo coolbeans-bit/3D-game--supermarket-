@@ -1,6 +1,23 @@
 # As Mitra Game — Project Plan
 
-Status: foundation step complete. No gameplay code and no extra packages until the next review.
+Status: Milestones 1–8 are complete. Milestone 9 has not started.
+
+## Milestone record
+
+Updated 1 October 2026. The inspection notes and phase list below are the original foundation plan. Delivery followed the later milestone briefs.
+
+| Milestone | Status | Delivered |
+| --- | --- | --- |
+| 1 | Complete | Flutter Scene, Flutter GPU, a lit scene, a camera, and a Flutter HUD |
+| 2 | Complete | First-person movement, joystick, look, and collision |
+| 3 | Complete | Raycast interaction, prompts, and the use button |
+| 4 | Complete | Supermarket blockout: entrance, aisles, shelves, checkout, storage |
+| 5 | Complete | Product catalog, shelf stock, and product visuals |
+| 6 | Complete | Pickup, carry, and place |
+| 7 | Complete | Checkout transaction, barcode scan, cash, and change |
+| 8 | Complete | Customer spawn, shopping lists, waypoint visit, and exit. Chiku is mascot data only |
+
+Customers do not take products or pay yet. That waits for a later milestone. Visual direction is recorded in `docs/VISUAL_DESIGN_DIRECTION.md`.
 
 Inspection date: 29 September 2026.
 

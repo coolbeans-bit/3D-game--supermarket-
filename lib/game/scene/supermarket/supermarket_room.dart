@@ -75,6 +75,14 @@ void addSupermarketRoom(Scene scene, BlockoutPalette palette) {
   );
   addBox(
     scene,
+    name: 'entrance-canopy-band',
+    center: Vector3(0, 2.74, 9.6),
+    size: Vector3(6.4, 0.05, 0.42),
+    material: palette.canopyBand,
+    castsShadows: false,
+  );
+  addBox(
+    scene,
     name: 'shop-ceiling',
     center: Vector3(0, 3.06, 0),
     size: Vector3(12.5, 0.08, 14.4),

@@ -108,4 +108,13 @@ void main() {
     expect(view.eye.z, 2);
     expect(view.target.z, lessThan(view.eye.z));
   });
+
+  test('the third-person camera sits behind the player', () {
+    final view = thirdPersonViewpoint(feet: Vector3(0, 0, 2), yaw: 0, pitch: 0);
+
+    expect(view.eye.z, greaterThan(2));
+    expect(view.eye.y, greaterThan(1));
+    expect(view.target.x, 0);
+    expect(view.target.z, closeTo(2, 1e-6));
+  });
 }

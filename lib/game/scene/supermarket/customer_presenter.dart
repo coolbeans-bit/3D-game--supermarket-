@@ -1,20 +1,23 @@
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart';
 
+import '../../characters/character_appearance.dart';
 import '../../customers/customer.dart';
+import '../../customers/customer_appearance.dart';
 import '../../customers/customer_type.dart';
+import '../characters/placeholder_figure.dart';
 import 'blockout_geometry.dart';
 
 /// Placeholder body and head for each shopper. The customer record owns the
 /// position; these nodes only follow it.
 class CustomerPresenter {
   CustomerPresenter(this.scene) {
-    _headMaterial = BlockoutPalette.flat(0.86, 0.74, 0.62, 0.7);
-    _bodyMaterials = {
-      CustomerType.regular.id: BlockoutPalette.flat(0.62, 0.42, 0.28, 0.72),
-      CustomerType.quickShopper.id: BlockoutPalette.flat(0.18, 0.48, 0.55, 0.7),
-      CustomerType.slowShopper.id: BlockoutPalette.flat(0.42, 0.36, 0.52, 0.74),
-    };
+    for (final type in CustomerType.roster) {
+      final look = appearanceFor(type);
+      _bodies[type.id] = _paint(look.body);
+      _accents[type.id] = _paint(look.accent);
+    }
+    _headMaterial = _paint(appearanceFor(CustomerType.regular).head);
   }
 
   final Scene scene;
@@ -23,7 +26,8 @@ class CustomerPresenter {
   final Quaternion _rotation = Quaternion.identity();
   final Vector3 _up = Vector3(0, 1, 0);
   late final PhysicallyBasedMaterial _headMaterial;
-  late final Map<String, PhysicallyBasedMaterial> _bodyMaterials;
+  final Map<String, PhysicallyBasedMaterial> _bodies = {};
+  final Map<String, PhysicallyBasedMaterial> _accents = {};
 
   void sync(Iterable<Customer> customers) {
     final live = <String>{};
@@ -48,46 +52,23 @@ class CustomerPresenter {
   }
 
   Node _create(Customer customer) {
-    final bodyMaterial =
-        _bodyMaterials[customer.type.id] ?? _bodyMaterials.values.first;
-    final body =
-        Node(
-            name: '${customer.id}-body',
-            mesh: Mesh(
-              CylinderGeometry(
-                bottomRadius: 0.17,
-                topRadius: 0.17,
-                height: 1.1,
-                radialSegments: 10,
-              ),
-              bodyMaterial,
-            ),
-          )
-          ..position = Vector3(0, 0.55, 0)
-          ..castsShadows = false
-          ..shadowStatic = false;
-    final head =
-        Node(
-            name: '${customer.id}-head',
-            mesh: Mesh(
-              CylinderGeometry(
-                bottomRadius: 0.12,
-                topRadius: 0.12,
-                height: 0.26,
-                radialSegments: 10,
-              ),
-              _headMaterial,
-            ),
-          )
-          ..position = Vector3(0, 1.23, 0)
-          ..castsShadows = false
-          ..shadowStatic = false;
+    final look = appearanceFor(customer.type);
     final root = Node(name: customer.id)
       ..castsShadows = false
       ..shadowStatic = false;
-    root.add(body);
-    root.add(head);
+    addPlaceholderFigure(
+      root,
+      name: customer.id,
+      accentKind: look.accentKind,
+      body: _bodies[customer.type.id] ?? _bodies.values.first,
+      head: _headMaterial,
+      accent: _accents[customer.type.id] ?? _accents.values.first,
+    );
     scene.add(root);
     return root;
   }
+}
+
+PhysicallyBasedMaterial _paint(RgbColor color) {
+  return BlockoutPalette.flat(color.r, color.g, color.b, 0.72);
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../ui/prototype_screen.dart';
+import '../ui/lesson_screen.dart';
 
 class AsMitraApp extends StatelessWidget {
   const AsMitraApp({super.key});
@@ -13,7 +13,7 @@ class AsMitraApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2E7D32)),
         useMaterial3: true,
       ),
-      home: const PrototypeScreen(),
+      home: const LessonScreen(),
     );
   }
 }

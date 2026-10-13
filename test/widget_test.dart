@@ -12,21 +12,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vector_math/vector_math.dart';
 
 void main() {
-  testWidgets('First-person screen shows the HUD, reticle, and joystick', (
-    tester,
-  ) async {
+  testWidgets('the app opens on the Marathi class path', (tester) async {
     await tester.pumpWidget(const AsMitraApp());
 
-    expect(find.text('As Mitra Game'), findsOneWidget);
-    expect(find.text('Supermarket blockout'), findsOneWidget);
-    expect(find.textContaining('Player X'), findsOneWidget);
-    expect(find.textContaining('Player Z'), findsOneWidget);
-    expect(find.byKey(const Key('center-reticle')), findsOneWidget);
-    expect(find.byKey(const Key('move-joystick')), findsOneWidget);
-    expect(find.byKey(const Key('interact-button')), findsNothing);
-    expect(find.byKey(const Key('checkout-panel')), findsNothing);
-    expect(find.byKey(const Key('customer-debug-hud')), findsOneWidget);
-    expect(find.textContaining('Active Customers: 0'), findsOneWidget);
+    expect(find.text('चिकूची मराठी'), findsOneWidget);
+    expect(find.textContaining('इयत्ता निवडा'), findsOneWidget);
+    expect(find.byKey(const Key('lesson-class-std1')), findsOneWidget);
+    expect(find.byKey(const Key('lesson-class-std5')), findsOneWidget);
+    expect(find.byKey(const Key('move-joystick')), findsNothing);
   });
 
   testWidgets('interaction prompt appears only while a target is aimed', (

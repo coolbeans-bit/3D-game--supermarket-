@@ -34,15 +34,7 @@ class InteractionPrompt extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  aim.target.displayName,
-                  key: const Key('interaction-name'),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                _AimTitle(name: aim.target.displayName),
                 if (aim.target.priceAmount != null) ...[
                   const SizedBox(height: 2),
                   Text(
@@ -61,6 +53,34 @@ class InteractionPrompt extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _AimTitle extends StatelessWidget {
+  const _AimTitle({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final lines = name.split('\n');
+    return Column(
+      key: const Key('interaction-name'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final line in lines)
+          Text(
+            line,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: line.runes.length <= 2 ? 42 : 22,
+              height: 1.2,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+      ],
     );
   }
 }

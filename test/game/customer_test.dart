@@ -1,7 +1,11 @@
 import 'dart:math';
 
 import 'package:asmitra_game/data/catalog/product_catalog.dart';
+import 'package:asmitra_game/game/characters/character_appearance.dart';
 import 'package:asmitra_game/game/customers/customer.dart';
+import 'package:asmitra_game/game/customers/customer_appearance.dart';
+import 'package:asmitra_game/game/customers/customer_id_sequence.dart';
+import 'package:asmitra_game/game/mascot/chiku.dart';
 import 'package:asmitra_game/game/customers/customer_manager.dart';
 import 'package:asmitra_game/game/customers/customer_movement.dart';
 import 'package:asmitra_game/game/customers/customer_spawner.dart';
@@ -32,6 +36,23 @@ void main() {
       expect(type.speed, greaterThan(0));
       expect(type.patience, greaterThan(0));
     }
+  });
+
+  test('regular, quick, and slow shoppers have their own pace', () {
+    expect(CustomerType.regular.speed, 0.95);
+    expect(CustomerType.quickShopper.speed, 1.35);
+    expect(CustomerType.slowShopper.speed, 0.62);
+    expect(CustomerType.regular.patience, 4);
+    expect(CustomerType.quickShopper.patience, 2);
+    expect(CustomerType.slowShopper.patience, 6.5);
+    expect(
+      CustomerType.quickShopper.patience,
+      lessThan(CustomerType.regular.patience),
+    );
+    expect(
+      CustomerType.regular.patience,
+      lessThan(CustomerType.slowShopper.patience),
+    );
   });
 
   test('customer speed follows the type configuration', () {
@@ -305,6 +326,28 @@ void main() {
     }
     expect(finished, greaterThan(2));
   });
+
+  test('a duplicate customer id is rejected', () {
+    final ids = CustomerIdSequence();
+    ids.reserve('customer-001');
+    expect(ids.next, throwsStateError);
+  });
+
+  test(
+    'shopper placeholders are visually distinct and Chiku stays separate',
+    () {
+      final looks = CustomerType.roster.map(appearanceFor).toList();
+      expect(looks.map((look) => look.body.r).toSet(), hasLength(3));
+      expect(
+        looks.map((look) => look.accentKind).toSet().length,
+        greaterThan(1),
+      );
+      expect(Chiku.name, 'Chiku');
+      expect(Chiku.appearance.accentKind, FigureAccent.ears);
+      expect(Chiku.line(ChikuMoment.welcome), 'Welcome to As Mitra Market!');
+      expect(Chiku.lines, hasLength(ChikuMoment.values.length));
+    },
+  );
 
   test('customer ids stay unique after shoppers leave', () {
     final manager = _manager(maxActive: 2, clearance: 0, interval: 0.1);

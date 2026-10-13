@@ -4,6 +4,7 @@ import 'package:vector_math/vector_math.dart';
 
 import '../../data/catalog/product_catalog.dart';
 import 'customer.dart';
+import 'customer_id_sequence.dart';
 import 'customer_type.dart';
 import 'shopping_list.dart';
 import 'store_customer_route.dart';
@@ -24,8 +25,7 @@ class CustomerSpawner {
   final StoreCustomerRoute route;
   final Random _random;
   final List<CustomerType> _types;
-  int _nextNumber = 0;
-  final Set<String> _issuedIds = {};
+  final CustomerIdSequence _ids = CustomerIdSequence();
 
   /// The next shopper, or null when the store is already full or the porch
   /// spawn is occupied.
@@ -46,14 +46,10 @@ class CustomerSpawner {
         return null;
       }
     }
-    _nextNumber += 1;
-    final id = 'customer-${_nextNumber.toString().padLeft(3, '0')}';
-    if (!_issuedIds.add(id)) {
-      throw StateError('duplicate customer id $id');
-    }
-    final type = _types[(_nextNumber - 1) % _types.length];
+    final issued = _ids.next();
+    final type = _types[(issued.number - 1) % _types.length];
     return Customer(
-      id: id,
+      id: issued.id,
       type: type,
       shoppingList: generateShoppingList(
         catalog: catalog,

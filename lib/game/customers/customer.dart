@@ -8,8 +8,8 @@ import 'waypoint.dart';
 
 /// Where a shopper is on the first visit loop.
 ///
-/// Finding a product, taking it, and joining the checkout queue are later
-/// states. They can be added here without replacing the customer record.
+/// Walking to a product, browsing, queuing, and paying are later states.
+/// They can be added here without replacing the customer record.
 enum CustomerState { entering, shopping, leaving, exited }
 
 /// One shopper. Rendering and Flutter widgets stay outside this type.
