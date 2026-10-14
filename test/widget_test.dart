@@ -17,16 +17,14 @@ void main() {
   ) async {
     await tester.pumpWidget(const AsMitraApp());
 
-    expect(find.text('As Mitra Game'), findsOneWidget);
-    expect(find.text('Supermarket blockout'), findsOneWidget);
-    expect(find.textContaining('Player X'), findsOneWidget);
-    expect(find.textContaining('Player Z'), findsOneWidget);
+    expect(find.text('FIND THIS LETTER'), findsOneWidget);
+    expect(find.byKey(const Key('find-letter')), findsOneWidget);
+    expect(find.byKey(const Key('find-score')), findsOneWidget);
     expect(find.byKey(const Key('center-reticle')), findsOneWidget);
     expect(find.byKey(const Key('move-joystick')), findsOneWidget);
     expect(find.byKey(const Key('interact-button')), findsNothing);
     expect(find.byKey(const Key('checkout-panel')), findsNothing);
-    expect(find.byKey(const Key('customer-debug-hud')), findsOneWidget);
-    expect(find.textContaining('Active Customers: 0'), findsOneWidget);
+    expect(find.textContaining('Player X'), findsNothing);
   });
 
   testWidgets('interaction prompt appears only while a target is aimed', (

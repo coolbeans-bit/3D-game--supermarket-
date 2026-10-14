@@ -5,6 +5,7 @@ import '../game/carry/carry_controller.dart';
 import '../game/carry/product_carry.dart';
 import '../game/checkout/checkout_session.dart';
 import '../game/customers/customer_manager.dart';
+import '../game/find/letter_round.dart';
 import '../game/input/look_controller.dart';
 import '../game/input/virtual_joystick.dart';
 import '../game/interaction/interaction_system.dart';
@@ -16,8 +17,9 @@ import 'center_reticle.dart';
 import 'checkout_panel.dart';
 import 'customer_debug_hud.dart';
 import 'interaction_prompt.dart';
+import 'letter_round_hud.dart';
 
-/// First-person test screen: the room, touch controls, and a small HUD.
+/// Third-person store: the room, the shopper, touch controls, and the HUD.
 class PrototypeScreen extends StatefulWidget {
   const PrototypeScreen({super.key});
 
@@ -31,7 +33,7 @@ class _PrototypeScreenState extends State<PrototypeScreen> {
     start: SupermarketLayout.playerStart,
     world: _world,
   );
-  final InteractionSystem _interactions = InteractionSystem(maxDistance: 4.5);
+  final InteractionSystem _interactions = InteractionSystem(maxDistance: 7);
   final CarryController _carry = CarryController();
   late final ProductCarry _productCarry = ProductCarry(
     carry: _carry,
@@ -44,9 +46,30 @@ class _PrototypeScreenState extends State<PrototypeScreen> {
   final CustomerManager _customers = CustomerManager(
     catalog: ProductCatalog.starter,
   );
+  late final LetterRound _round = LetterRound(catalog: ProductCatalog.starter);
+  bool _wasHolding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _carry.addListener(_judgePickup);
+  }
+
+  void _judgePickup() {
+    final holding = _carry.isHolding;
+    if (holding && !_wasHolding) {
+      final product = _productCarry.heldDefinition;
+      if (product != null) {
+        _round.checkPickup(product);
+      }
+    }
+    _wasHolding = holding;
+  }
 
   @override
   void dispose() {
+    _carry.removeListener(_judgePickup);
+    _round.dispose();
     _player.dispose();
     _interactions.dispose();
     _carry.dispose();
@@ -83,6 +106,17 @@ class _PrototypeScreenState extends State<PrototypeScreen> {
             bottom: 24,
             child: SafeArea(child: VirtualJoystick(onChanged: _player.setMove)),
           ),
+          const IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  colors: [Color(0x00000000), Color(0x66000000)],
+                  stops: [0.62, 1],
+                ),
+              ),
+              child: SizedBox.expand(),
+            ),
+          ),
           const CenterReticle(),
           Align(
             alignment: Alignment.bottomCenter,
@@ -96,7 +130,15 @@ class _PrototypeScreenState extends State<PrototypeScreen> {
               ),
             ),
           ),
-          _PrototypeHud(player: _player, carry: _carry),
+          Align(
+            alignment: Alignment.topCenter,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: LetterRoundHud(round: _round),
+              ),
+            ),
+          ),
           Align(
             alignment: Alignment.topLeft,
             child: SafeArea(
@@ -109,7 +151,7 @@ class _PrototypeScreenState extends State<PrototypeScreen> {
           Align(
             alignment: Alignment.topCenter,
             child: Padding(
-              padding: const EdgeInsets.only(top: 148, left: 16, right: 16),
+              padding: const EdgeInsets.only(top: 280, left: 16, right: 16),
               child: CheckoutPanel(session: _checkout),
             ),
           ),
@@ -119,69 +161,3 @@ class _PrototypeScreenState extends State<PrototypeScreen> {
   }
 }
 
-class _PrototypeHud extends StatelessWidget {
-  const _PrototypeHud({required this.player, required this.carry});
-
-  final PlayerController player;
-  final CarryController carry;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Material(
-            color: const Color(0xCC111111),
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'As Mitra Game',
-                    style: Theme.of(context).textTheme.titleMedium
-                        ?.copyWith(color: Colors.white),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Supermarket blockout',
-                    style: Theme.of(context).textTheme.bodySmall
-                        ?.copyWith(color: Colors.white70),
-                  ),
-                  const SizedBox(height: 6),
-                  ListenableBuilder(
-                    listenable: Listenable.merge([player, carry]),
-                    builder: (context, _) {
-                      final position = player.position;
-                      String axis(String name, double value) =>
-                          '$name ${value.toStringAsFixed(2)}';
-                      final holding = carry.held;
-                      final carried = holding == null
-                          ? ''
-                          : '\nHolding ${holding.label}';
-                      return Text(
-                        '${axis('Player X', position.x)}\n'
-                        '${axis('Player Y', position.y)}\n'
-                        '${axis('Player Z', position.z)}'
-                        '$carried',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          height: 1.3,
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

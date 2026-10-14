@@ -63,4 +63,38 @@ void main() {
     system.setAim(hitKey: null, distance: null);
     expect(system.aim, isNull);
   });
+
+  test('looking from one unit to another retargets the action', () {
+    final system = InteractionSystem(maxDistance: 4.5);
+    var first = 0;
+    var second = 0;
+    final near = Object();
+    final far = Object();
+    system.bind(
+      near,
+      BasicInteractable(
+        id: 'aisle-1-milk-2-0',
+        displayName: 'Fresh Milk',
+        prompt: 'Pick Up',
+        onInteract: () => first++,
+      ),
+    );
+    system.bind(
+      far,
+      BasicInteractable(
+        id: 'aisle-1-milk-2-1',
+        displayName: 'Fresh Milk',
+        prompt: 'Pick Up',
+        onInteract: () => second++,
+      ),
+    );
+
+    system.setAim(hitKey: near, distance: 1);
+    system.setAim(hitKey: far, distance: 1.2);
+    system.interact();
+
+    expect(system.aim?.target.id, 'aisle-1-milk-2-1');
+    expect(first, 0);
+    expect(second, 1);
+  });
 }

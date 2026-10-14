@@ -5,9 +5,9 @@ import '../../../data/models/product_definition.dart';
 import '../../carry/carry_controller.dart';
 import '../../carry/held_item_anchor.dart';
 import '../../carry/product_carry.dart';
+import '../../checkout/sale_return.dart';
 import '../../interaction/interactable.dart';
 import '../../interaction/interaction_system.dart';
-import '../../player/player_camera.dart';
 import '../../shelves/shelf_slot.dart';
 import '../../shelves/store_shelf_plan.dart';
 import '../../world/supermarket/supermarket_layout.dart';
@@ -35,8 +35,12 @@ class HeldProductPresenter {
   final Map<ShelfSlot, Node> _slotNodes = {};
 
   Node? heldNode;
-  PlayerViewpoint? _view;
+  Vector3? _feet;
   double _yaw = 0;
+  Vector3? _grabFrom;
+  double _grabElapsed = 1;
+
+  static const double _grabSeconds = 0.5;
 
   CarryController get carry => productCarry.carry;
 
@@ -80,14 +84,28 @@ class HeldProductPresenter {
     return hit;
   }
 
-  void follow(PlayerViewpoint view, double yaw) {
-    _view = view;
+  void follow(
+    Vector3 feet,
+    double yaw, {
+    Vector3? hand,
+    double deltaSeconds = 0,
+  }) {
+    _feet = feet;
     _yaw = yaw;
     final node = heldNode;
     if (node == null) {
       return;
     }
-    node.position = anchor.worldPosition(eye: view.eye, target: view.target);
+    final target = hand ?? anchor.worldPosition(feet: feet, yaw: yaw);
+    final from = _grabFrom;
+    var position = target;
+    if (from != null && _grabElapsed < _grabSeconds) {
+      _grabElapsed += deltaSeconds;
+      final t = (_grabElapsed / _grabSeconds).clamp(0.0, 1.0);
+      final eased = t * t * (3 - 2 * t);
+      position = from + (target - from) * eased;
+    }
+    node.position = position;
     node.rotation = Quaternion.axisAngle(Vector3(0, 1, 0), yaw);
   }
 
@@ -118,6 +136,8 @@ class HeldProductPresenter {
     }
     final node = _slotNodes.remove(slot);
     if (node != null) {
+      _grabFrom = node.position.clone();
+      _grabElapsed = 0;
       _productFace.remove(node);
       scene.remove(node);
     }
@@ -154,14 +174,50 @@ class HeldProductPresenter {
       ..shadowStatic = false
       ..frustumCulled = false;
     heldNode = node;
-    final view = _view;
-    if (view != null) {
-      follow(view, _yaw);
+    final feet = _feet;
+    if (feet != null) {
+      follow(feet, _yaw);
     }
   }
 
   /// Drops the carried mesh after a checkout scan.
   void releaseHeldVisual() => _hideHeld();
+
+  /// Puts cancelled scans back on the shelf that stocks that product.
+  ///
+  /// A product whose shelf is full goes back into empty hands instead.
+  void restock(List<String> productIds) {
+    final result = returnScannedProducts(
+      productIds: productIds,
+      catalog: productCarry.catalog,
+      shelves: [for (final face in _faces) face.stocked],
+    );
+    for (final returned in result.placed) {
+      final face = _faceFor(returned.shelfId);
+      if (face != null) {
+        _spawnSlot(face, returned.slot);
+      }
+    }
+    if (result.unplacedIds.isEmpty || carry.isHolding) {
+      return;
+    }
+    final product = productCarry.catalog.lookup(result.unplacedIds.first);
+    if (product == null) {
+      return;
+    }
+    if (carry.tryHold(CarriedItem(id: product.id, label: product.name))) {
+      _showHeld();
+    }
+  }
+
+  _ShelfFace? _faceFor(String shelfId) {
+    for (final face in _faces) {
+      if (face.stocked.plan.id == shelfId) {
+        return face;
+      }
+    }
+    return null;
+  }
 
   void _hideHeld() {
     final node = heldNode;
@@ -178,7 +234,7 @@ class HeldProductPresenter {
     ProductDefinition product,
   ) {
     return _LiveInteractable(
-      id: 'product-${product.id}',
+      id: 'product-${face.stocked.plan.id}-${slot.level}-${slot.index}',
       displayNameOf: () => product.name,
       promptOf: () => 'Pick Up',
       priceOf: () => product.sellingPrice,

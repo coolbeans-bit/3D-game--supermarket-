@@ -24,7 +24,7 @@ void main() {
     expect(next.z, closeTo(-1, 1e-6));
   });
 
-  test('strafe right moves along +X when facing -Z', () {
+  test('strafe right moves along -X when facing -Z', () {
     final next = movePlayer(
       position: Vector3.zero(),
       yaw: 0,
@@ -34,11 +34,11 @@ void main() {
       limit: 10,
     );
 
-    expect(next.x, closeTo(1, 1e-6));
+    expect(next.x, closeTo(-1, 1e-6));
     expect(next.z, closeTo(0, 1e-6));
   });
 
-  test('a quarter turn makes forward movement go along +X', () {
+  test('a quarter turn makes forward movement go along -X', () {
     final next = movePlayer(
       position: Vector3.zero(),
       yaw: pi / 2,
@@ -48,14 +48,14 @@ void main() {
       limit: 10,
     );
 
-    expect(next.x, closeTo(1, 1e-6));
+    expect(next.x, closeTo(-1, 1e-6));
     expect(next.z, closeTo(0, 1e-6));
   });
 
   test('the player slides along a wall instead of passing through it', () {
     final limit = RoomLayout.walkLimit;
     final next = movePlayer(
-      position: Vector3(limit, 0, 1),
+      position: Vector3(-limit, 0, 1),
       yaw: 0,
       input: Vector2(1, 1),
       speed: 2,
@@ -63,7 +63,7 @@ void main() {
       limit: limit,
     );
 
-    expect(next.x, closeTo(limit, 1e-5));
+    expect(next.x, closeTo(-limit, 1e-5));
     expect(next.z, lessThan(1));
   });
 
@@ -78,7 +78,7 @@ void main() {
       obstacles: [CollisionBox(minX: -2, maxX: 2, minZ: -2, maxZ: 0.15)],
     );
 
-    expect(next.x, greaterThan(0.4));
+    expect(next.x, lessThan(-0.4));
     expect(next.z, closeTo(0.3, 1e-6));
   });
 
@@ -95,7 +95,28 @@ void main() {
     expect(look.pitch, PlayerController.maxPitch);
   });
 
-  test('the camera sits at eye height and looks along the facing', () {
+  test('forward stick faces the same way as the camera', () {
+    final yaw = headingForStick(cameraYaw: 0, stick: Vector2(0, 1));
+    expect(yaw, closeTo(0, 1e-6));
+  });
+
+  test('a right stick turns her toward screen right', () {
+    final yaw = headingForStick(cameraYaw: 0, stick: Vector2(1, 0));
+    expect(yaw, closeTo(pi / 2, 1e-6));
+  });
+
+  test('she turns the short way and does not snap', () {
+    expect(
+      turnToward(yaw: 0.2, target: -0.1, maxStep: 1),
+      closeTo(-0.1, 1e-6),
+    );
+    expect(
+      turnToward(yaw: 0, target: 2, maxStep: 0.4),
+      closeTo(0.4, 1e-6),
+    );
+  });
+
+  test('the camera sits behind the player and looks along the facing', () {
     final view = playerViewpoint(
       feet: Vector3(1, 0, 2),
       eyeHeight: RoomLayout.eyeHeight,
@@ -103,9 +124,19 @@ void main() {
       pitch: 0,
     );
 
-    expect(view.eye.x, 1);
     expect(view.eye.y, closeTo(RoomLayout.eyeHeight, 1e-5));
-    expect(view.eye.z, 2);
+    expect(view.eye.z, greaterThan(2));
+    expect(view.target.z, lessThan(2));
     expect(view.target.z, lessThan(view.eye.z));
+
+    final turned = playerViewpoint(
+      feet: Vector3(1, 0, 2),
+      eyeHeight: RoomLayout.eyeHeight,
+      yaw: pi / 2,
+      pitch: 0,
+    );
+    expect(turned.eye.x, greaterThan(1));
+    expect(turned.target.x, lessThan(1));
+    expect(turned.target.x, lessThan(turned.eye.x));
   });
 }

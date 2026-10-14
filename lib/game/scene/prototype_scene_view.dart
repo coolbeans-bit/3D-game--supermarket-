@@ -10,6 +10,7 @@ import '../interaction/interaction_system.dart';
 import '../player/player_controller.dart';
 import '../world/collision_box.dart';
 import 'aim_raycast.dart';
+import 'player_avatar.dart';
 import 'products/held_product_presenter.dart';
 import 'supermarket/customer_presenter.dart';
 import 'supermarket/supermarket_scene.dart';
@@ -41,6 +42,8 @@ class _PrototypeSceneViewState extends State<PrototypeSceneView> {
   Scene? _scene;
   HeldProductPresenter? _presenter;
   CustomerPresenter? _customers;
+  PlayerAvatar? _avatar;
+  bool _wasHolding = false;
   bool _ready = false;
   String? _error;
 
@@ -54,7 +57,7 @@ class _PrototypeSceneViewState extends State<PrototypeSceneView> {
       return;
     }
 
-    Scene.initializeStaticResources().then((_) {
+    Scene.initializeStaticResources().then((_) async {
       if (!mounted) {
         return;
       }
@@ -76,9 +79,21 @@ class _PrototypeSceneViewState extends State<PrototypeSceneView> {
         widget.checkout.onHandsCleared = () {
           _presenter?.releaseHeldVisual();
         };
+        widget.checkout.onSaleCancelled = (productIds) {
+          _presenter?.restock(productIds);
+        };
         _customers = CustomerPresenter(scene);
+        final avatar = PlayerAvatar(scene);
+        await avatar.load();
+        if (!mounted) {
+          return;
+        }
+        _avatar = avatar;
         setState(() => _ready = true);
       } catch (error) {
+        if (!mounted) {
+          return;
+        }
         setState(() => _error = error.toString());
       }
     });
@@ -97,7 +112,7 @@ class _PrototypeSceneViewState extends State<PrototypeSceneView> {
         ? hit?.node
         : presenter.aimKeyFor(
             hit: hit?.node,
-            eye: view.eye,
+            eye: widget.player.position,
             point: hit?.worldPoint,
             holding: widget.productCarry.carry.isHolding,
           );
@@ -109,7 +124,7 @@ class _PrototypeSceneViewState extends State<PrototypeSceneView> {
     return PerspectiveCamera(
       position: view.eye,
       target: view.target,
-      fovRadiansY: 60 * pi / 180,
+      fovRadiansY: 50 * pi / 180,
     );
   }
 
@@ -128,7 +143,24 @@ class _PrototypeSceneViewState extends State<PrototypeSceneView> {
           );
           widget.player.tick(deltaSeconds);
           _customers?.sync(widget.customers.active);
-          _presenter?.follow(widget.player.viewpoint(), widget.player.yaw);
+          final avatar = _avatar;
+          avatar?.sync(
+            feet: widget.player.position,
+            yaw: widget.player.yaw,
+            moveAmount: widget.player.moveAmount,
+            speed: widget.player.moveSpeed * widget.player.moveAmount,
+            deltaSeconds: deltaSeconds,
+          );
+          if (widget.productCarry.carry.isHolding && !_wasHolding) {
+            avatar?.playReach();
+          }
+          _wasHolding = widget.productCarry.carry.isHolding;
+          _presenter?.follow(
+            widget.player.position,
+            widget.player.yaw,
+            hand: avatar?.carryPoint(),
+            deltaSeconds: deltaSeconds,
+          );
           _updateAim(scene);
         },
       );

@@ -20,6 +20,8 @@ class ProductDefinition {
   ProductDefinition({
     required this.id,
     required this.name,
+    required this.marathiName,
+    required this.firstLetter,
     required this.barcodeId,
     required this.category,
     required this.purchasePrice,
@@ -31,6 +33,12 @@ class ProductDefinition {
   }) {
     if (id.isEmpty || name.isEmpty || barcodeId.isEmpty) {
       throw ArgumentError('product id, name, and barcode are required');
+    }
+    if (marathiName.isEmpty || firstLetter.isEmpty) {
+      throw ArgumentError('a Marathi name and its first letter are required');
+    }
+    if (!marathiName.startsWith(firstLetter)) {
+      throw ArgumentError('the Marathi name must begin with $firstLetter');
     }
     if (purchasePrice <= 0 || sellingPrice <= 0) {
       throw ArgumentError('prices must be positive whole currency units');
@@ -45,6 +53,11 @@ class ProductDefinition {
 
   final String id;
   final String name;
+
+  /// Spoken name used by the letter round. [firstLetter] is the base akshar,
+  /// so तांदूळ is त rather than the syllable ता.
+  final String marathiName;
+  final String firstLetter;
 
   /// Game barcode. This is not a phone-camera scan.
   final String barcodeId;

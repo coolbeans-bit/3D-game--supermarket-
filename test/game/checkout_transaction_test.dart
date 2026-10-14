@@ -3,8 +3,10 @@ import 'package:asmitra_game/game/carry/carry_controller.dart';
 import 'package:asmitra_game/game/carry/product_carry.dart';
 import 'package:asmitra_game/game/checkout/checkout_session.dart';
 import 'package:asmitra_game/game/checkout/product_scanner.dart';
+import 'package:asmitra_game/game/checkout/sale_return.dart';
 import 'package:asmitra_game/game/checkout/sale_transaction.dart';
 import 'package:asmitra_game/game/shelves/shelf_unit.dart';
+import 'package:asmitra_game/game/shelves/store_shelf_plan.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -190,5 +192,88 @@ void main() {
     expect(shelf.quantity, 7);
     expect(session.transaction!.total, 48);
     expect(carry.isHolding, isFalse);
+  });
+
+  test('cancel gives scanned products back in scan order', () {
+    final carry = CarryController();
+    final session = CheckoutSession(catalog: catalog, carry: carry);
+    final returned = <String>[];
+    session.onSaleCancelled = returned.addAll;
+    carry.tryHold(const CarriedItem(id: 'milk', label: 'Fresh Milk'));
+    session.scanHeldItem();
+    carry.tryHold(const CarriedItem(id: 'bread', label: 'Bread'));
+    session.scanHeldItem();
+
+    session.cancel();
+
+    expect(returned, ['milk', 'bread']);
+    expect(session.isOpen, isFalse);
+    expect(session.lastCompletedSale, isNull);
+    expect(carry.isHolding, isFalse);
+  });
+
+  test('a completed sale does not give the products back', () {
+    final carry = CarryController();
+    final session = CheckoutSession(catalog: catalog, carry: carry);
+    final returned = <String>[];
+    session.onSaleCancelled = returned.addAll;
+    carry.tryHold(const CarriedItem(id: 'milk', label: 'Fresh Milk'));
+    session.scanHeldItem();
+    session.requestPayment();
+    session.tender(100);
+    session.finish();
+
+    expect(returned, isEmpty);
+    expect(session.lastCompletedSale!.total, 48);
+  });
+
+  test('returned products go back on their own shelf', () {
+    final shelves = starterShelves(catalog);
+    final milkShelf = shelves.firstWhere(
+      (shelf) => shelf.plan.productId == 'milk',
+    );
+    final before = milkShelf.unit.quantity;
+    milkShelf.unit.removeStock(milk, 1);
+
+    final result = returnScannedProducts(
+      productIds: const ['milk', 'missing'],
+      catalog: catalog,
+      shelves: shelves,
+    );
+
+    expect(milkShelf.unit.quantity, before);
+    expect(result.placed.single.shelfId, milkShelf.plan.id);
+    expect(result.unplacedIds, ['missing']);
+  });
+
+  test('a full shelf leaves the product unplaced', () {
+    final shelf = ShelfUnit.empty(
+      id: 'milk-face',
+      slotsPerLevel: 1,
+      levelCount: 1,
+      shelfType: milk.shelfType,
+    )..stockProduct(milk, 1);
+    final stocked = StockedShelf(
+      const StoreShelfPlan(
+        id: 'milk-face',
+        gondolaName: 'gondola-a',
+        side: 1,
+        centerZ: 0,
+        slotsPerLevel: 1,
+        productId: 'milk',
+        quantity: 1,
+      ),
+      shelf,
+    );
+
+    final result = returnScannedProducts(
+      productIds: const ['milk'],
+      catalog: catalog,
+      shelves: [stocked],
+    );
+
+    expect(result.placed, isEmpty);
+    expect(result.unplacedIds, ['milk']);
+    expect(shelf.quantity, 1);
   });
 }

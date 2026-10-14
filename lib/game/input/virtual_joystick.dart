@@ -57,8 +57,15 @@ class _VirtualJoystickState extends State<VirtualJoystick> {
         child: DecoratedBox(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: const Color(0x55FFFFFF),
-            border: Border.all(color: const Color(0x99FFFFFF)),
+            color: const Color(0xCC1B5E20),
+            border: Border.all(color: const Color(0xFFFFE082), width: 3),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x66000000),
+                blurRadius: 16,
+                offset: Offset(0, 6),
+              ),
+            ],
           ),
           child: Center(
             child: Transform.translate(
@@ -66,7 +73,10 @@ class _VirtualJoystickState extends State<VirtualJoystick> {
               child: const DecoratedBox(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Color(0xEEFFFFFF),
+                  color: Color(0xFFFFF6E8),
+                  boxShadow: [
+                    BoxShadow(color: Color(0x44000000), blurRadius: 6),
+                  ],
                 ),
                 child: SizedBox(
                   width: _knobRadius * 2,

@@ -14,6 +14,20 @@ void main() {
       'Potato Chips',
       'Soap',
       'Shampoo',
+      'Banana',
+      'Onion',
+      'Tomato',
+      'Green Chilli',
+      'Cooking Oil',
+      'Tea',
+      'Eggs',
+      'Butter',
+      'Jam',
+      'Jaggery',
+      'Noodles',
+      'Chickpeas',
+      'Water',
+      'Mango',
     ]);
   });
 
@@ -38,5 +52,22 @@ void main() {
         .map((product) => product.barcodeId)
         .toSet();
     expect(barcodes, hasLength(catalog.products.length));
+  });
+
+  test('each Marathi name begins with its letter', () {
+    for (final product in catalog.products) {
+      expect(product.marathiName.startsWith(product.firstLetter), isTrue);
+    }
+    expect(catalog.require('milk').marathiName, 'दूध');
+    expect(catalog.require('rice').firstLetter, 'त');
+    expect(catalog.withFirstLetter('क').map((product) => product.id), [
+      'banana',
+      'onion',
+    ]);
+    expect(catalog.withFirstLetter('त').map((product) => product.id), [
+      'rice',
+      'oil',
+    ]);
+    expect(catalog.withFirstLetter('आ').single.id, 'mango');
   });
 }

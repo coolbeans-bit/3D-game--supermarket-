@@ -1,40 +1,34 @@
+import 'dart:math';
+
 import 'package:vector_math/vector_math.dart';
 
-/// Where a carried mesh sits relative to the first-person camera.
+/// Where a carried mesh sits in the character's right hand.
 ///
-/// [forwardMeters] is in front of the eye. [rightMeters] shifts the mesh
-/// across the view; a negative value sits on the right of the reticle.
-/// [belowMeters] drops it under the reticle. [visualScale] only affects
-/// the carried mesh.
+/// [forwardMeters] is ahead of the feet along the facing. [rightMeters] is
+/// toward the character's right. [heightMeters] is above the floor.
+/// [visualScale] only affects the carried mesh.
 class HeldItemAnchor {
   const HeldItemAnchor({
-    this.forwardMeters = 0.52,
-    this.rightMeters = -0.16,
-    this.belowMeters = 0.2,
-    this.visualScale = 1.25,
+    this.forwardMeters = 0.38,
+    this.rightMeters = 0.22,
+    this.heightMeters = 0.95,
+    this.visualScale = 0.65,
   });
 
   final double forwardMeters;
   final double rightMeters;
-  final double belowMeters;
+  final double heightMeters;
   final double visualScale;
 
-  Vector3 worldPosition({required Vector3 eye, required Vector3 target}) {
-    final forward = target - eye;
-    final length = forward.length;
-    if (length > 1e-8) {
-      forward.scale(1 / length);
-    }
-    final right = forward.cross(Vector3(0, 1, 0));
-    if (right.length2 < 1e-8) {
-      right.setValues(1, 0, 0);
-    } else {
-      right.normalize();
-    }
-    final up = right.cross(forward)..normalize();
-    return eye +
-        (forward * forwardMeters) +
-        (right * rightMeters) -
-        (up * belowMeters);
+  Vector3 worldPosition({required Vector3 feet, required double yaw}) {
+    final forwardX = -sin(yaw);
+    final forwardZ = -cos(yaw);
+    final rightX = -cos(yaw);
+    final rightZ = sin(yaw);
+    return Vector3(
+      feet.x + forwardX * forwardMeters + rightX * rightMeters,
+      feet.y + heightMeters,
+      feet.z + forwardZ * forwardMeters + rightZ * rightMeters,
+    );
   }
 }

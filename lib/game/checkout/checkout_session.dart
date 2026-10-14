@@ -20,7 +20,11 @@ class CheckoutSession extends ChangeNotifier {
   /// Called after a scan takes the item out of the player's hands.
   void Function()? onHandsCleared;
 
+  /// Product ids scanned into the sale that [cancel] is giving back, in order.
+  void Function(List<String> productIds)? onSaleCancelled;
+
   SaleTransaction? _transaction;
+  final List<String> _scannedProductIds = [];
   int _nextId = 0;
   int? rejectedAmount;
 
@@ -47,6 +51,7 @@ class CheckoutSession extends ChangeNotifier {
     }
     _nextId += 1;
     _transaction = SaleTransaction.scanning('sale-$_nextId');
+    _scannedProductIds.clear();
     rejectedAmount = null;
     notice = null;
     notifyListeners();
@@ -77,6 +82,7 @@ class CheckoutSession extends ChangeNotifier {
       return false;
     }
     carry.release();
+    _scannedProductIds.add(product.id);
     onHandsCleared?.call();
     notifyListeners();
     return true;
@@ -109,6 +115,7 @@ class CheckoutSession extends ChangeNotifier {
     }
     lastCompletedSale = current.toCompletedSale();
     _transaction = null;
+    _scannedProductIds.clear();
     rejectedAmount = null;
     notice = 'Sale Complete';
     notifyListeners();
@@ -119,9 +126,12 @@ class CheckoutSession extends ChangeNotifier {
     if (current == null || !current.cancel()) {
       return;
     }
+    final returned = List<String>.of(_scannedProductIds);
+    _scannedProductIds.clear();
     _transaction = null;
     rejectedAmount = null;
     notifyListeners();
+    onSaleCancelled?.call(returned);
   }
 
   void dismissNotice() {
