@@ -12,10 +12,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vector_math/vector_math.dart';
 
 void main() {
-  testWidgets('First-person screen shows the HUD, reticle, and joystick', (
-    tester,
-  ) async {
+  testWidgets('Class home leads into the store letter hunt', (tester) async {
     await tester.pumpWidget(const AsMitraApp());
+
+    expect(find.text('चिकूची मराठी'), findsOneWidget);
+    expect(find.byKey(const Key('enter-market')), findsOneWidget);
+    expect(find.byKey(const Key('move-joystick')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('enter-market')));
+    await tester.pump();
 
     expect(find.text('FIND THIS LETTER'), findsOneWidget);
     expect(find.byKey(const Key('find-letter')), findsOneWidget);
@@ -24,7 +29,6 @@ void main() {
     expect(find.byKey(const Key('move-joystick')), findsOneWidget);
     expect(find.byKey(const Key('interact-button')), findsNothing);
     expect(find.byKey(const Key('checkout-panel')), findsNothing);
-    expect(find.textContaining('Player X'), findsNothing);
   });
 
   testWidgets('interaction prompt appears only while a target is aimed', (

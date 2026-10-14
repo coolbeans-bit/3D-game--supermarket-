@@ -11,6 +11,7 @@ import 'supermarket_checkout.dart';
 import 'supermarket_entrance.dart';
 import 'supermarket_room.dart';
 import 'supermarket_shelf.dart';
+import 'produce_mart.dart';
 import 'supermarket_storage.dart';
 
 /// Assembles the supermarket blockout. [world] already holds static obstacles.
@@ -33,6 +34,7 @@ HeldProductPresenter buildSupermarketScene(
   );
   addSupermarketCheckout(scene, interactions, palette, checkout);
   addSupermarketStorage(scene, interactions, world, palette);
+  addProduceMart(scene, world);
 
   scene.directionalLight = DirectionalLight(
     direction: Vector3(-0.35, -1, -0.25),
