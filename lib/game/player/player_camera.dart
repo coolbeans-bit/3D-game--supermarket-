@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:vector_math/vector_math.dart';
 
+import '../world/supermarket/supermarket_layout.dart';
+
 /// Camera position and the point it looks at.
 class PlayerViewpoint {
   const PlayerViewpoint(this.eye, this.target);
@@ -11,13 +13,16 @@ class PlayerViewpoint {
 }
 
 /// How far behind the character the camera sits, in meters.
-const double thirdPersonDistance = 2.7;
+const double thirdPersonDistance = 2.85;
 
-/// A small shift so her shoulder does not fill the middle of the view.
-const double thirdPersonShoulder = 0.22;
+/// Shift to her right so the aim line passes beside her head, not through it.
+const double thirdPersonShoulder = 0.28;
 
-/// How far ahead of her feet the view aims, in meters.
-const double thirdPersonLookAhead = 1.05;
+/// Eye line of the model. She is about 1.6 m tall, so her eyes sit just under that.
+const double thirdPersonHead = 1.5;
+
+/// How far ahead of her the view aims, in meters.
+const double thirdPersonLookAhead = 0.85;
 
 /// Applies a touch drag. [dx] and [dy] are pixels, with positive [dy] downward.
 ///
@@ -38,12 +43,12 @@ const double thirdPersonLookAhead = 1.05;
   );
 }
 
-/// Third-person view orbiting the character.
+/// Third-person view from just behind the character's head.
 ///
-/// [yaw] is the camera yaw. 0 looks toward -Z. The camera stays just behind
-/// her and aims a short way ahead, so she stays in frame while the aisles
-/// remain in view. Positive [pitch] looks upward. [eyeHeight] is the camera
-/// height above the feet when [pitch] is 0.
+/// [yaw] is the camera yaw. 0 looks toward -Z. At pitch 0 the camera sits on
+/// her eye line and looks straight ahead, so the store is seen the way she
+/// sees it. Dragging all the way up raises the aim above her head. Dragging
+/// down looks toward the floor. The camera itself stays near her head.
 PlayerViewpoint playerViewpoint({
   required Vector3 feet,
   required double eyeHeight,
@@ -55,20 +60,97 @@ PlayerViewpoint playerViewpoint({
   final forwardZ = -cos(yaw);
   final rightX = -cos(yaw);
   final rightZ = sin(yaw);
-  final lift = sin(pitch);
-  final eye = Vector3(
-    feet.x - forwardX * distance + rightX * thirdPersonShoulder,
-    feet.y + eyeHeight + lift * 0.55,
-    feet.z - forwardZ * distance + rightZ * thirdPersonShoulder,
+  final rise = sin(pitch);
+  final eye = _alongBoom(
+    Vector3(
+      feet.x - forwardX * distance + rightX * thirdPersonShoulder,
+      feet.y + thirdPersonHead + 0.12 + rise * 0.15,
+      feet.z - forwardZ * distance + rightZ * thirdPersonShoulder,
+    ),
+    feet,
   );
   final lookAt = Vector3(
-    feet.x +
-        forwardX * thirdPersonLookAhead +
-        rightX * thirdPersonShoulder * 0.25,
-    feet.y + eyeHeight * 0.78 + lift * 1.35,
-    feet.z +
-        forwardZ * thirdPersonLookAhead +
-        rightZ * thirdPersonShoulder * 0.25,
+    feet.x + forwardX * thirdPersonLookAhead + rightX * thirdPersonShoulder,
+    feet.y + thirdPersonHead + rise * 1.7,
+    feet.z + forwardZ * thirdPersonLookAhead + rightZ * thirdPersonShoulder,
   );
   return PlayerViewpoint(eye, lookAt);
+}
+
+/// How far behind her head the camera can sit before a wall or shelf.
+double cameraBoom({
+  required Vector3 feet,
+  required double yaw,
+  double distance = thirdPersonDistance,
+}) {
+  final forwardX = -sin(yaw);
+  final forwardZ = -cos(yaw);
+  final rightX = -cos(yaw);
+  final rightZ = sin(yaw);
+  final head = Vector3(feet.x, feet.y + thirdPersonHead + 0.12, feet.z);
+  final eye = Vector3(
+    feet.x - forwardX * distance + rightX * thirdPersonShoulder,
+    head.y,
+    feet.z - forwardZ * distance + rightZ * thirdPersonShoulder,
+  );
+  return _boomLength(eye, head);
+}
+
+/// Pulls the camera in along the line behind her head.
+///
+/// The spot stays inside the room. A wall stops the boom short of the wall
+/// instead of leaving the camera outside the store.
+Vector3 _alongBoom(Vector3 eye, Vector3 feet) {
+  final head = Vector3(feet.x, eye.y, feet.z);
+  final toEye = eye - head;
+  final len = toEye.length;
+  if (len < 0.001) {
+    return eye;
+  }
+  final kept = _boomLength(eye, head);
+  return head + toEye / len * kept;
+}
+
+double _boomLength(Vector3 eye, Vector3 head) {
+  final toEye = eye - head;
+  final len = toEye.length;
+  if (len < 0.001) {
+    return len;
+  }
+  final dir = toEye / len;
+  var best = 0.55;
+  for (var distance = len; distance >= 0.55; distance -= 0.08) {
+    final sample = head + dir * distance;
+    if (_cameraClear(sample.x, sample.z)) {
+      best = distance;
+      break;
+    }
+  }
+  return best > len ? len : best;
+}
+
+bool _cameraClear(double x, double z) {
+  const margin = 0.16;
+  final insideShop =
+      x >= SupermarketLayout.shopMinX + margin &&
+      x <= SupermarketLayout.shopMaxX - margin &&
+      z >= SupermarketLayout.storageMinZ + 0.4 &&
+      z <= SupermarketLayout.shopMaxZ - margin;
+  final onPorch =
+      z >= SupermarketLayout.shopMaxZ - 0.2 &&
+      z <= SupermarketLayout.porchOuterZ - 0.25 &&
+      x.abs() <= SupermarketLayout.porchHalfWidth - 0.2;
+  if (!insideShop && !onPorch) {
+    return false;
+  }
+  const inset = SupermarketLayout.playerRadius - 0.08;
+  for (final box in SupermarketLayout.staticObstacles()) {
+    if (x >= box.minX + inset &&
+        x <= box.maxX - inset &&
+        z >= box.minZ + inset &&
+        z <= box.maxZ - inset) {
+      return false;
+    }
+  }
+  return true;
 }

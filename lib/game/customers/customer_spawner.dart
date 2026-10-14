@@ -39,8 +39,9 @@ class CustomerSpawner {
     if (_types.isEmpty) {
       return null;
     }
+    final laneX = enterLaneX;
     for (final position in occupied) {
-      final dx = position.x - route.spawn.x;
+      final dx = position.x - laneX;
       final dz = position.z - route.spawn.z;
       if (dx * dx + dz * dz < config.spawnClearance * config.spawnClearance) {
         return null;
@@ -52,17 +53,20 @@ class CustomerSpawner {
       throw StateError('duplicate customer id $id');
     }
     final type = _types[(_nextNumber - 1) % _types.length];
+    final shoppingList = generateShoppingList(
+      catalog: catalog,
+      random: _random,
+      limits: config.listLimits,
+    );
+    final trip = route.planFor(_nextNumber, shoppingList);
     return Customer(
       id: id,
       type: type,
-      shoppingList: generateShoppingList(
-        catalog: catalog,
-        random: _random,
-        limits: config.listLimits,
-      ),
-      position: route.spawn,
-      enteringPath: route.entering,
-      leavingPath: route.leaving,
+      shoppingList: shoppingList,
+      position: trip.spawn,
+      enteringPath: trip.entering,
+      shoppingPath: trip.shopping,
+      leavingPath: trip.leaving,
     );
   }
 }

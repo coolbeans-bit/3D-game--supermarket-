@@ -180,6 +180,14 @@ class HeldProductPresenter {
     }
   }
 
+  /// Shows the held mesh when an item has moved from the basket into the hands.
+  void ensureHeld() {
+    if (heldNode != null || !carry.isHolding) {
+      return;
+    }
+    _showHeld();
+  }
+
   /// Drops the carried mesh after a checkout scan.
   void releaseHeldVisual() => _hideHeld();
 
@@ -205,7 +213,7 @@ class HeldProductPresenter {
     if (product == null) {
       return;
     }
-    if (carry.tryHold(CarriedItem(id: product.id, label: product.name))) {
+    if (carry.tryHold(CarriedItem(id: product.id, label: product.marathiName))) {
       _showHeld();
     }
   }
@@ -235,7 +243,7 @@ class HeldProductPresenter {
   ) {
     return _LiveInteractable(
       id: 'product-${face.stocked.plan.id}-${slot.level}-${slot.index}',
-      displayNameOf: () => product.name,
+      displayNameOf: () => product.marathiName,
       promptOf: () => 'Pick Up',
       priceOf: () => product.sellingPrice,
       onInteract: () => _pickup(face, slot),
@@ -252,9 +260,9 @@ class HeldProductPresenter {
         }
         final product = productCarry.heldDefinition;
         if (product != null && shelf.canPlace(product)) {
-          return 'Place ${product.name}';
+          return 'Place ${product.marathiName}';
         }
-        return product?.name ?? 'Shelf';
+        return product?.marathiName ?? 'Shelf';
       },
       promptOf: () {
         if (!carry.isHolding) {

@@ -21,8 +21,9 @@ void main() {
 
     await tester.tap(find.byKey(const Key('enter-market')));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('FIND THIS LETTER'), findsOneWidget);
+    expect(find.text('हे अक्षर शोधा'), findsOneWidget);
     expect(find.byKey(const Key('find-letter')), findsOneWidget);
     expect(find.byKey(const Key('find-score')), findsOneWidget);
     expect(find.byKey(const Key('center-reticle')), findsOneWidget);
@@ -157,9 +158,9 @@ void main() {
     scan('biscuits', 'Biscuits');
     await tester.pump();
 
-    expect(find.text('Fresh Milk × 1'), findsOneWidget);
-    expect(find.text('Bread × 2'), findsOneWidget);
-    expect(find.text('Biscuits × 3'), findsOneWidget);
+    expect(find.text('दूध × 1'), findsOneWidget);
+    expect(find.text('पाव × 2'), findsOneWidget);
+    expect(find.text('बिस्किट × 3'), findsOneWidget);
     expect(find.text('₹210'), findsOneWidget);
     expect(carry.isHolding, isFalse);
 

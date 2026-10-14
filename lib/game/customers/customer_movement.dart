@@ -56,7 +56,9 @@ class CustomerMetrics {
   final dx = target.x - position.x;
   final dz = target.z - position.z;
   final distance = sqrt(dx * dx + dz * dz);
-  final yaw = distance == 0 ? 0.0 : atan2(dx, -dz);
+  // Same facing as the player: yaw 0 looks toward -Z, and positive yaw
+  // turns toward -X. atan2(-dx, -dz) is that yaw for the step direction.
+  final yaw = distance == 0 ? 0.0 : atan2(-dx, -dz);
   if (dt <= 0 || distance <= arrival) {
     final clear = _open(target.x, target.z, limit, obstacles);
     if (distance <= arrival && clear) {

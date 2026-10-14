@@ -5,6 +5,7 @@ import 'package:asmitra_game/game/player/player_controller.dart';
 import 'package:asmitra_game/game/player/player_movement.dart';
 import 'package:asmitra_game/game/scene/room_layout.dart';
 import 'package:asmitra_game/game/world/collision_box.dart';
+import 'package:asmitra_game/game/world/supermarket/supermarket_layout.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vector_math/vector_math.dart';
 
@@ -105,15 +106,14 @@ void main() {
     expect(yaw, closeTo(pi / 2, 1e-6));
   });
 
+  test('a sideways body takes no step until she has turned', () {
+    expect(facingAlignment(yaw: 0, target: pi / 2), closeTo(0, 1e-6));
+    expect(facingAlignment(yaw: 0, target: 0), closeTo(1, 1e-6));
+  });
+
   test('she turns the short way and does not snap', () {
-    expect(
-      turnToward(yaw: 0.2, target: -0.1, maxStep: 1),
-      closeTo(-0.1, 1e-6),
-    );
-    expect(
-      turnToward(yaw: 0, target: 2, maxStep: 0.4),
-      closeTo(0.4, 1e-6),
-    );
+    expect(turnToward(yaw: 0.2, target: -0.1, maxStep: 1), closeTo(-0.1, 1e-6));
+    expect(turnToward(yaw: 0, target: 2, maxStep: 0.4), closeTo(0.4, 1e-6));
   });
 
   test('the camera sits behind the player and looks along the facing', () {
@@ -124,7 +124,8 @@ void main() {
       pitch: 0,
     );
 
-    expect(view.eye.y, closeTo(RoomLayout.eyeHeight, 1e-5));
+    expect(view.eye.y, closeTo(thirdPersonHead + 0.12, 1e-5));
+    expect(view.target.y, closeTo(thirdPersonHead, 1e-5));
     expect(view.eye.z, greaterThan(2));
     expect(view.target.z, lessThan(2));
     expect(view.target.z, lessThan(view.eye.z));
@@ -138,5 +139,50 @@ void main() {
     expect(turned.eye.x, greaterThan(1));
     expect(turned.target.x, lessThan(1));
     expect(turned.target.x, lessThan(turned.eye.x));
+
+    final lookedUp = playerViewpoint(
+      feet: Vector3(1, 0, 2),
+      eyeHeight: RoomLayout.eyeHeight,
+      yaw: 0,
+      pitch: 0.72,
+    );
+    expect(lookedUp.target.y, greaterThan(lookedUp.eye.y));
+  });
+
+  test('the camera stays inside the store when she faces a wall', () {
+    final view = playerViewpoint(
+      feet: Vector3(5.2, 0, 0),
+      eyeHeight: RoomLayout.eyeHeight,
+      yaw: pi / 2,
+      pitch: 0,
+    );
+
+    expect(view.eye.x, greaterThan(5.2 + 0.4));
+    expect(view.eye.x, lessThan(SupermarketLayout.shopMaxX));
+    expect(view.target.x, lessThan(view.eye.x));
+  });
+
+  test('a new direction steps at once and the camera does not spin', () {
+    final player = PlayerController(
+      start: Vector3(0, 0, 4),
+      world: CollisionWorld(limit: 16),
+    );
+    player.setMove(Vector2(1, 0));
+    final start = player.position.clone();
+    for (var i = 0; i < 6; i++) {
+      player.tick(0.05);
+    }
+
+    expect(player.position.distanceTo(start), greaterThan(0.35));
+    expect(player.cameraYaw, closeTo(0, 1e-6));
+    expect(player.position.z, closeTo(4, 0.05));
+
+    for (var i = 0; i < 40; i++) {
+      player.tick(0.05);
+    }
+    expect(player.yaw, closeTo(pi / 2, 0.05));
+    expect(player.cameraYaw, closeTo(0, 1e-6));
+    expect(player.position.x, lessThan(-2));
+    expect(player.position.z, closeTo(4, 0.05));
   });
 }

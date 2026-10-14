@@ -6,7 +6,9 @@ import 'package:asmitra_game/game/customers/customer_manager.dart';
 import 'package:asmitra_game/game/customers/customer_movement.dart';
 import 'package:asmitra_game/game/customers/customer_spawner.dart';
 import 'package:asmitra_game/game/customers/customer_type.dart';
+import 'package:asmitra_game/game/customers/shelf_stand.dart';
 import 'package:asmitra_game/game/customers/shopping_list.dart';
+import 'package:asmitra_game/game/shelves/store_shelf_plan.dart';
 import 'package:asmitra_game/game/customers/store_customer_route.dart';
 import 'package:asmitra_game/game/customers/waypoint.dart';
 import 'package:asmitra_game/game/player/player_movement.dart';
@@ -151,6 +153,37 @@ void main() {
     expect(position.z, closeTo(target.z, 0.001));
   });
 
+  test('a shopper stands in the aisle beside the product', () {
+    for (final plan in StoreShelfPlan.plans) {
+      final stand = standForProduct(plan.productId);
+      expect(stand, isNotNull, reason: plan.productId);
+      expect(
+        SupermarketLayout.occupied(stand!.x, stand.z),
+        isFalse,
+        reason: '${plan.productId} ${stand.x}, ${stand.z}',
+      );
+    }
+    final trip = StoreCustomerRoute.standard.planFor(1, const [
+      ShoppingListEntry(productId: 'milk', quantity: 1),
+      ShoppingListEntry(productId: 'shampoo', quantity: 1),
+      ShoppingListEntry(productId: 'tea', quantity: 1),
+    ]);
+    final points = [
+      ...trip.entering,
+      ...trip.shopping,
+      ...trip.leaving,
+    ];
+    for (final point in points) {
+      expect(
+        SupermarketLayout.occupied(point.position.x, point.position.z),
+        isFalse,
+        reason: '${point.id} ${point.position.x}, ${point.position.z}',
+      );
+    }
+    final picked = points.map((point) => point.productId).whereType<String>();
+    expect(picked.toSet(), {'milk', 'shampoo', 'tea'});
+  });
+
   test('the store waypoints stay on walkable floor', () {
     final route = StoreCustomerRoute.standard;
     final points = [
@@ -201,6 +234,20 @@ void main() {
     }
     expect(arrived, isFalse);
     expect(position.z, greaterThan(1.4));
+  });
+
+  test('a customer faces the direction she is walking', () {
+    final position = Vector3.zero();
+    final step = stepToward(
+      position: position,
+      target: Vector3(2, 0, 0),
+      speed: 1,
+      dt: 0.1,
+      limit: 10,
+    );
+
+    expect(step.yaw, closeTo(-pi / 2, 1e-6));
+    expect(position.x, greaterThan(0));
   });
 
   test('a customer footprint blocks the player', () {

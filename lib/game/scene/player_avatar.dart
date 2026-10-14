@@ -11,7 +11,7 @@ class PlayerAvatar {
   PlayerAvatar(this.scene);
 
   static const assetPath = 'assets/characters/player.glb';
-  static const idleName = 'CharacterArmature|Idle';
+  static const idleName = 'CharacterArmature|Idle_Neutral';
   static const walkName = 'CharacterArmature|Walk';
   static const reachName = 'CharacterArmature|Interact';
 
@@ -19,8 +19,8 @@ class PlayerAvatar {
   static const bodyScale = 0.86;
 
   /// Ground speed, in meters per second, that matches one walk cycle at
-  /// normal playback.
-  static const walkReferenceSpeed = 1.25;
+  /// normal playback. The clip is a casual two-step walk, not a run.
+  static const walkReferenceSpeed = 1.55;
 
   final Scene scene;
   Node? _root;
@@ -34,8 +34,9 @@ class PlayerAvatar {
   final Vector3 _up = Vector3(0, 1, 0);
   final Vector3 _scale = Vector3.all(bodyScale);
 
-  Future<void> load() async {
-    final model = await Node.fromGlbAsset(assetPath);
+  /// [model] is a clone of the shared shopper file. The file itself is loaded
+  /// once by [HumanLibrary] so the cashier and customers can use the same body.
+  void attach(Node model) {
     _silence(model);
     _hand = model.getChildByName('Wrist.R');
     _root = Node(name: 'player')
@@ -81,18 +82,11 @@ class PlayerAvatar {
     if (hand == null) {
       return null;
     }
-    final matrix = hand.globalTransform;
-    final point = matrix.getTranslation();
-    final along = Vector3(
-      matrix.entry(0, 0),
-      matrix.entry(1, 0),
-      matrix.entry(2, 0),
-    );
-    final length = along.length;
-    if (length > 1e-6) {
-      point.addScaled(along, 0.05 / length);
-    }
-    point.y -= 0.03;
+    final point = hand.globalTransform.getTranslation();
+    // Local forward is -Z. Sit the item just in front of the wrist, in the palm.
+    final forward = _rotation.rotated(Vector3(0, 0, -1));
+    point.addScaled(forward, 0.08);
+    point.y -= 0.06;
     return point;
   }
 

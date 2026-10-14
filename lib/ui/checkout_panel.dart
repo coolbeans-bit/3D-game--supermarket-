@@ -178,10 +178,19 @@ class _LineList extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      '${session.catalog.lookup(line.productId)?.name ?? line.productId}'
+                      '${session.catalog.lookup(line.productId)?.marathiName ?? line.productId}'
                       ' × ${line.quantity}',
                       key: Key('checkout-line-${line.productId}'),
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      style: const TextStyle(
+                        fontFamily: 'Nirmala UI',
+                        fontFamilyFallback: [
+                          'Segoe UI',
+                          'Noto Sans Devanagari',
+                          'Mangal',
+                        ],
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                   Text(

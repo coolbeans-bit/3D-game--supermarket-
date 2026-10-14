@@ -42,6 +42,16 @@ class CheckoutSession extends ChangeNotifier {
 
   bool get showInsufficientCash => rejectedAmount != null;
 
+  void _openIfNeeded() {
+    final state = _transaction?.state;
+    if (state == null ||
+        state == TransactionState.idle ||
+        state == TransactionState.completed ||
+        state == TransactionState.cancelled) {
+      open();
+    }
+  }
+
   void open() {
     final current = _transaction;
     if (current != null &&
@@ -57,6 +67,23 @@ class CheckoutSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Scans a product that is already out of the player's hands, such as
+  /// the next item from the entrance basket.
+  bool scanProductId(String productId) {
+    final product = catalog.lookup(productId);
+    if (product == null) {
+      return false;
+    }
+    _openIfNeeded();
+    final current = _transaction;
+    if (current == null || !scanner.scanProduct(current, product)) {
+      return false;
+    }
+    _scannedProductIds.add(product.id);
+    notifyListeners();
+    return true;
+  }
+
   /// Scans the carried product. Empty hands leave the sale unchanged.
   bool scanHeldItem() {
     if (!carry.isHolding) {
@@ -70,13 +97,7 @@ class CheckoutSession extends ChangeNotifier {
     if (product == null) {
       return false;
     }
-    final state = _transaction?.state;
-    if (state == null ||
-        state == TransactionState.idle ||
-        state == TransactionState.completed ||
-        state == TransactionState.cancelled) {
-      open();
-    }
+    _openIfNeeded();
     final current = _transaction;
     if (current == null || !scanner.scanProduct(current, product)) {
       return false;

@@ -26,21 +26,21 @@ class CustomerType {
   static final regular = CustomerType(
     id: 'regular',
     label: 'Regular',
-    speed: 0.95,
+    speed: 1.55,
     patience: 4,
   );
 
   static final quickShopper = CustomerType(
     id: 'quick-shopper',
     label: 'Quick Shopper',
-    speed: 1.35,
+    speed: 1.8,
     patience: 2,
   );
 
   static final slowShopper = CustomerType(
     id: 'slow-shopper',
     label: 'Slow Shopper',
-    speed: 0.62,
+    speed: 1.35,
     patience: 6.5,
   );
 

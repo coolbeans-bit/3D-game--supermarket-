@@ -21,6 +21,7 @@ class Customer {
     required Vector3 position,
     required this.enteringPath,
     required this.leavingPath,
+    this.shoppingPath = const [],
   }) : speed = type.speed,
        patience = type.patience,
        position = position.clone(),
@@ -40,12 +41,18 @@ class Customer {
   final List<ShoppingListEntry> shoppingList;
   final Vector3 position;
   final List<Waypoint> enteringPath;
+  final List<Waypoint> shoppingPath;
   final List<Waypoint> leavingPath;
 
   CustomerState state;
   double yaw = 0;
   double waitRemaining = 0;
+  double actionRemaining = 0;
+  bool reaching = false;
   int legIndex = 0;
+
+  /// Catalog ids this shopper has already taken off a shelf.
+  final List<String> picked = [];
 
   String get stateLabel => switch (state) {
     CustomerState.entering => 'ENTERING',
@@ -73,15 +80,34 @@ void advanceCustomer({
         onFinished: () {
           customer.state = CustomerState.shopping;
           customer.waitRemaining = customer.patience;
+          customer.reaching = false;
+          customer.actionRemaining = 0;
           customer.legIndex = 0;
         },
       );
     case CustomerState.shopping:
-      customer.waitRemaining -= dt;
-      if (customer.waitRemaining <= 0) {
-        customer.state = CustomerState.leaving;
-        customer.legIndex = 0;
+      if (customer.shoppingPath.isEmpty) {
+        customer.waitRemaining -= dt;
+        customer.reaching = false;
+        if (customer.waitRemaining <= 0) {
+          customer.state = CustomerState.leaving;
+          customer.legIndex = 0;
+        }
+        break;
       }
+      _follow(
+        customer,
+        customer.shoppingPath,
+        dt,
+        limit,
+        obstacles,
+        onFinished: () {
+          customer.state = CustomerState.leaving;
+          customer.reaching = false;
+          customer.actionRemaining = 0;
+          customer.legIndex = 0;
+        },
+      );
     case CustomerState.leaving:
       _follow(
         customer,
@@ -110,20 +136,57 @@ void _follow(
     onFinished();
     return;
   }
+  final point = path[customer.legIndex];
+  if (customer.actionRemaining > 0) {
+    customer.actionRemaining -= dt;
+    customer.reaching = point.reach;
+    final face = point.faceYaw;
+    if (face != null) {
+      customer.yaw = face;
+    }
+    if (customer.actionRemaining > 0) {
+      return;
+    }
+    customer.reaching = false;
+    _keep(customer, point);
+    customer.legIndex += 1;
+    if (customer.legIndex >= path.length) {
+      onFinished();
+    }
+    return;
+  }
   final step = stepToward(
     position: customer.position,
-    target: path[customer.legIndex].position,
+    target: point.position,
     speed: customer.speed,
     dt: dt,
     limit: limit,
     obstacles: obstacles,
   );
   customer.yaw = step.yaw;
+  customer.reaching = false;
   if (!step.arrived) {
+    return;
+  }
+  if (point.pause > 0) {
+    customer.actionRemaining = point.pause;
+    customer.reaching = point.reach;
+    final face = point.faceYaw;
+    if (face != null) {
+      customer.yaw = face;
+    }
     return;
   }
   customer.legIndex += 1;
   if (customer.legIndex >= path.length) {
     onFinished();
   }
+}
+
+void _keep(Customer customer, Waypoint point) {
+  final productId = point.productId;
+  if (productId == null || customer.picked.contains(productId)) {
+    return;
+  }
+  customer.picked.add(productId);
 }

@@ -66,7 +66,13 @@ class SupermarketLayout {
   static const double paymentCenterX = 5.05;
   static const double paymentCenterZ = 4.45;
 
-  static Vector3 get playerStart => Vector3(0, 0, 11);
+  /// Basket stand just inside the door, off the aisle customers walk.
+  static const double basketX = -2.15;
+  static const double basketZ = 6.35;
+
+  /// On the porch, far enough from the outer curb that the camera can sit
+  /// a full step behind her instead of inside her head.
+  static Vector3 get playerStart => Vector3(0, 0, 9);
 
   static const List<FloorMark> queueMarks = [
     FloorMark(4.55, 3.15),

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:vector_math/vector_math.dart';
 
@@ -18,19 +20,29 @@ class PlayerController extends ChangeNotifier {
   double yaw = 0;
 
   /// Direction the camera looks. Dragging the view changes this, not her body.
+  /// Walking does not change it: the stick is read from this yaw, so turning
+  /// the camera while she walks would curve the stick into a spin.
   double cameraYaw = 0;
   double pitch = 0;
+
+  /// Boom length after walls shorten it. It eases back out so leaving a shelf
+  /// does not pop the view.
+  double _boom = thirdPersonDistance;
 
   final CollisionWorld _world;
 
   final double eyeHeight = RoomLayout.eyeHeight;
 
   /// A walking pace, matched to the walk cycle so her feet stay on the ground.
-  final double moveSpeed = 1.35;
+  final double moveSpeed = 1.55;
   final double lookSensitivity = 0.0032;
 
-  /// Radians per second. A quarter turn takes about a quarter of a second.
-  static const double turnSpeed = 6.5;
+  /// Radians per second. The body faces the stick quickly. The step itself
+  /// does not wait for that turn.
+  static const double turnSpeed = 14;
+
+  /// Meters per second the camera boom lengthens again after a wall.
+  static const double boomEase = 5;
 
   static const double maxPitch = 0.72;
 
@@ -62,30 +74,39 @@ class PlayerController extends ChangeNotifier {
     pitch = look.pitch;
   }
 
+  /// The finger left the look area. The view stays where the drag put it.
+  void endLook() {}
+
   /// Advances movement by [deltaSeconds]. Large stalls are capped so one
   /// slow frame cannot jump the player through a wall.
   ///
-  /// She walks along her facing and turns toward the stick, so a sidestep
-  /// becomes a turn instead of a slide.
+  /// The stick is the screen: up walks away from the camera, right walks to
+  /// screen right. She steps that way at once and turns her body to match.
+  /// The camera stays put, so the picture and the stick keep meaning the
+  /// same direction.
   void tick(double deltaSeconds) {
     final dt = deltaSeconds.clamp(0.0, 0.05);
     final amount = moveAmount;
+    var heading = yaw;
     if (amount > 0) {
-      yaw = turnToward(
-        yaw: yaw,
-        target: headingForStick(cameraYaw: cameraYaw, stick: _move),
-        maxStep: turnSpeed * dt,
-      );
+      heading = headingForStick(cameraYaw: cameraYaw, stick: _move);
+      yaw = turnToward(yaw: yaw, target: heading, maxStep: turnSpeed * dt);
     }
     position = movePlayer(
       position: position,
-      yaw: yaw,
+      yaw: heading,
       input: Vector2(0, amount),
       speed: moveSpeed,
       dt: dt,
       limit: _world.limit,
       obstacles: _world.boxes,
     );
+    final cleared = cameraBoom(feet: position, yaw: cameraYaw);
+    if (cleared < _boom) {
+      _boom = cleared;
+    } else {
+      _boom = min(cleared, _boom + boomEase * dt);
+    }
     notifyListeners();
   }
 
@@ -95,6 +116,7 @@ class PlayerController extends ChangeNotifier {
       eyeHeight: eyeHeight,
       yaw: cameraYaw,
       pitch: pitch,
+      distance: _boom,
     );
   }
 }

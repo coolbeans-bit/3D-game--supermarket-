@@ -40,6 +40,12 @@ class InteractionPrompt extends StatelessWidget {
                   aim.target.displayName,
                   key: const Key('interaction-name'),
                   style: const TextStyle(
+                    fontFamily: 'Nirmala UI',
+                    fontFamilyFallback: [
+                      'Segoe UI',
+                      'Noto Sans Devanagari',
+                      'Mangal',
+                    ],
                     color: Color(0xFF1B5E20),
                     fontSize: 20,
                     fontWeight: FontWeight.w800,

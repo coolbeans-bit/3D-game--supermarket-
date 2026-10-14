@@ -1,6 +1,7 @@
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart';
 
+import '../../carry/shopping_basket.dart';
 import '../../checkout/checkout_session.dart';
 import '../../checkout/sale_transaction.dart';
 import '../../interaction/interactable.dart';
@@ -16,8 +17,10 @@ void addSupermarketCheckout(
   Scene scene,
   InteractionSystem interactions,
   BlockoutPalette palette,
-  CheckoutSession checkout,
-) {
+  CheckoutSession checkout, {
+  ShoppingBasket? basket,
+  void Function()? onAskCashier,
+}) {
   for (final span in SupermarketLayout.solids) {
     if (span.role == SpanRole.counter) {
       addSpan(scene, span, name: 'checkout-counter', material: palette.counter);
@@ -64,13 +67,41 @@ void addSupermarketCheckout(
     );
   }
 
+  final ask = onAskCashier;
+  if (ask != null) {
+    final bell = addBox(
+      scene,
+      name: 'checkout-ask',
+      center: Vector3(
+        SupermarketLayout.counterCenterX + 0.55,
+        1.15,
+        SupermarketLayout.counterCenterZ -
+            SupermarketLayout.counterSizeZ / 2 -
+            0.22,
+      ),
+      size: Vector3(0.32, 0.48, 0.28),
+      material: palette.payment,
+      shadowStatic: false,
+    );
+    interactions.bind(bell, _AskInteractable(onAsk: ask));
+  }
+
   interactions.bind(
     scanner,
     _CheckoutInteractable(
       checkout: checkout,
+      basket: basket,
       onUse: () {
         if (checkout.carry.isHolding) {
           checkout.scanHeldItem();
+          return;
+        }
+        final heldBasket = basket;
+        if (heldBasket != null && heldBasket.carried && heldBasket.count > 0) {
+          final next = heldBasket.productIds.first;
+          if (checkout.scanProductId(next)) {
+            heldBasket.takeNext();
+          }
           return;
         }
         checkout.open();
@@ -80,9 +111,14 @@ void addSupermarketCheckout(
 }
 
 class _CheckoutInteractable implements Interactable {
-  _CheckoutInteractable({required this.checkout, required this.onUse});
+  _CheckoutInteractable({
+    required this.checkout,
+    required this.onUse,
+    this.basket,
+  });
 
   final CheckoutSession checkout;
+  final ShoppingBasket? basket;
   final void Function() onUse;
 
   @override
@@ -100,7 +136,11 @@ class _CheckoutInteractable implements Interactable {
         state == TransactionState.scanning ||
         state == TransactionState.completed ||
         state == TransactionState.cancelled;
-    if (checkout.carry.isHolding && canScan) {
+    final heldBasket = basket;
+    final basketCount = heldBasket != null && heldBasket.carried
+        ? heldBasket.count
+        : 0;
+    if ((checkout.carry.isHolding || basketCount > 0) && canScan) {
       return 'Scan Product';
     }
     return 'Use Checkout';
@@ -114,4 +154,29 @@ class _CheckoutInteractable implements Interactable {
 
   @override
   void interact() => onUse();
+}
+
+/// The bell in front of the cashier. Asking does not scan or score.
+class _AskInteractable implements Interactable {
+  _AskInteractable({required this.onAsk});
+
+  final void Function() onAsk;
+
+  @override
+  String get id => 'cashier-ask';
+
+  @override
+  String get displayName => 'कॅशियर';
+
+  @override
+  String get prompt => 'कुठे आहे?';
+
+  @override
+  int? get priceAmount => null;
+
+  @override
+  bool get isInteractable => true;
+
+  @override
+  void interact() => onAsk();
 }

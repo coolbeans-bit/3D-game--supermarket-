@@ -45,6 +45,22 @@ double turnToward({
   return yaw + maxStep * delta.sign;
 }
 
+/// How much of the step should happen while she is still turning.
+///
+/// 1 when she already faces [target], and 0 when she is facing away. The
+/// step fades out through the turn so her feet do not slide sideways.
+double facingAlignment({required double yaw, required double target}) {
+  var delta = target - yaw;
+  while (delta > pi) {
+    delta -= 2 * pi;
+  }
+  while (delta < -pi) {
+    delta += 2 * pi;
+  }
+  final aligned = cos(delta);
+  return aligned < 0 ? 0 : aligned;
+}
+
 Vector3 movePlayer({
   required Vector3 position,
   required double yaw,
